@@ -185,6 +185,17 @@ This is a fork of **[VoltAgent/awesome-design-md](https://github.com/VoltAgent/a
 
 If you want to improve a file for everyone, contribute upstream — [open an issue there](https://github.com/VoltAgent/awesome-design-md/issues) first to discuss it. You can also [request a DESIGN.md](https://getdesign.md/request) for a specific site. Changes in this fork are personal tweaks and may diverge from upstream.
 
+## Maintainer & Contributors
+
+Maintained by [**@hemanth-create**](https://github.com/hemanth-create).
+
+| | Contributor | Role |
+|---|---|---|
+| <a href="https://github.com/hemanth-create"><img src="https://github.com/hemanth-create.png" width="48" height="48" alt="hemanth-create" /></a> | [**@hemanth-create**](https://github.com/hemanth-create) | Maintainer — curation, README, fork upkeep |
+| <a href="https://github.com/VoltAgent"><img src="https://github.com/VoltAgent.png" width="48" height="48" alt="VoltAgent" /></a> | [**VoltAgent**](https://github.com/VoltAgent) | Upstream — original DESIGN.md analysis |
+
+Spotted something wrong in a file here, or want a site added? [Open an issue](https://github.com/hemanth-create/UI-UX/issues) or send a PR.
+
 ## License
 
 MIT License — see [LICENSE](LICENSE).
