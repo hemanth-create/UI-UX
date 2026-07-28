@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halyard — DESIGN.md conformance render (vercel spec)</title>
+</head>
+<body>
+<style>
+  /* ===================================================================
+     Every value below is lifted verbatim from design-md/vercel/DESIGN.md.
+     Token names mirror the spec's YAML keys 1:1 so conformance can be
+     checked mechanically. Nothing here was invented except where the
+     comment says DERIVED.
+     =================================================================== */
+  :root {
+    /* colors: */
+    --primary: #171717;      --on-primary: #ffffff;
+    --ink: #171717;          --body: #4d4d4d;          --mute: #888888;
+    --hairline: #ebebeb;     --hairline-strong: #a1a1a1;
+    --canvas: #ffffff;       --canvas-soft: #fafafa;   --canvas-soft-2: #f5f5f5;
+    --link: #0070f3;         --link-deep: #0761d1;     --link-bg-soft: #d3e5ff;
+    --warning: #f5a623;
+    --gradient-develop-start: #007cf0; --gradient-develop-end: #00dfd8;
+    --gradient-preview-start: #7928ca; --gradient-preview-end: #ff0080;
+    --gradient-ship-start: #ff4d4d;    --gradient-ship-end: #f9cb28;
+    --selection-bg: #171717; --selection-fg: #f2f2f2;
+
+    /* rounded: */
+    --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-pill-sm: 64px; --r-pill: 100px; --r-full: 9999px;
+
+    /* spacing: */
+    --s-xxs: 4px; --s-xs: 8px; --s-sm: 12px; --s-md: 16px; --s-lg: 24px;
+    --s-xl: 32px; --s-2xl: 40px; --s-3xl: 48px; --s-4xl: 64px; --s-5xl: 96px;
+    --s-6xl: 128px; --s-section: 192px;
+
+    /* typography: font stacks exactly as specified (Geist is not loadable
+       under the artifact CSP — the spec's own fallback chain takes over) */
+    --sans: Geist, Inter, system-ui, -apple-system, sans-serif;
+    --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+
+    /* Elevation & Depth table, levels 1-5 */
+    --el-1: inset 0 0 0 1px #00000014;
+    --el-3: 0px 2px 2px #0000000a, 0px 8px 8px -8px #0000000a, inset 0 0 0 1px #00000014;
+    --el-4: 0px 2px 2px #0000000a, 0px 8px 16px -4px #0000000a, inset 0 0 0 1px #00000014;
+
+    --container: 1400px; /* "Content stays centred at 1400 px" */
+
+    /* The spec's chief depth cue is the polarity-flipped band: canvas-soft ->
+       primary. That cue only exists in one direction, so it needs its own
+       tokens to survive a dark ground (see the DERIVED block below). */
+    --flip-bg: #171717; --flip-ink: #ffffff; --flip-body: #a1a1a1;
+    --flip-hairline: #ffffff14; --flip-ring: none;
+    --logo-ink: var(--hairline-strong);
+  }
+
+  /* DERIVED — the spec ships no dark token set. Rather than invent colors,
+     this reuses the spec's own polarity-flip band: primary becomes the
+     ground, on-primary the ink, and hairline-strong steps in as the
+     "deemphasised text color" the spec already assigns it. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #ffffff; --body: #a1a1a1; --mute: #888888;
+      --canvas: #171717; --canvas-soft: #171717; --canvas-soft-2: #ffffff0a;
+      --hairline: #ffffff1f; --hairline-strong: #ffffff33;
+      --primary: #ffffff; --on-primary: #171717;
+      --el-1: inset 0 0 0 1px #ffffff1f;
+      --el-3: inset 0 0 0 1px #ffffff1f;
+      --el-4: inset 0 0 0 1px #ffffff29;
+      /* The polarity flip cannot flip toward ink on an ink ground — it would
+         vanish. Inverted here to a raised surface + ring, which keeps the
+         band-separation cue the spec depends on. */
+      --flip-bg: #ffffff0a; --flip-ink: #ffffff; --flip-body: #a1a1a1;
+      --flip-hairline: #ffffff1f; --flip-ring: inset 0 0 0 1px #ffffff1f;
+      --logo-ink: #888888;
+      --selection-bg: #ffffff; --selection-fg: #171717;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #ffffff; --body: #a1a1a1; --mute: #888888;
+    --canvas: #171717; --canvas-soft: #171717; --canvas-soft-2: #ffffff0a;
+    --hairline: #ffffff1f; --hairline-strong: #ffffff33;
+    --primary: #ffffff; --on-primary: #171717;
+    --el-1: inset 0 0 0 1px #ffffff1f;
+    --el-3: inset 0 0 0 1px #ffffff1f;
+    --el-4: inset 0 0 0 1px #ffffff29;
+    /* The polarity flip cannot flip toward ink on an ink ground — it would
+       vanish. Inverted here to a raised surface + ring, which keeps the
+       band-separation cue the spec depends on. */
+    --flip-bg: #ffffff0a; --flip-ink: #ffffff; --flip-body: #a1a1a1;
+    --flip-hairline: #ffffff1f; --flip-ring: inset 0 0 0 1px #ffffff1f;
+    --logo-ink: #888888;
+    --selection-bg: #ffffff; --selection-fg: #171717;
+  }
+  :root[data-theme="light"] {
+    --ink: #171717; --body: #4d4d4d; --mute: #888888;
+    --canvas: #ffffff; --canvas-soft: #fafafa; --canvas-soft-2: #f5f5f5;
+    --hairline: #ebebeb; --hairline-strong: #a1a1a1;
+    --primary: #171717; --on-primary: #ffffff;
+    --el-1: inset 0 0 0 1px #00000014;
+    --el-3: 0px 2px 2px #0000000a, 0px 8px 8px -8px #0000000a, inset 0 0 0 1px #00000014;
+    --el-4: 0px 2px 2px #0000000a, 0px 8px 16px -4px #0000000a, inset 0 0 0 1px #00000014;
+    --selection-bg: #171717; --selection-fg: #f2f2f2;
+    --flip-bg: #171717; --flip-ink: #ffffff; --flip-body: #a1a1a1;
+    --flip-hairline: #ffffff14; --flip-ring: none;
+    --logo-ink: #a1a1a1;
+  }
+
+  * { box-sizing: border-box; }
+  ::selection { background: var(--selection-bg); color: var(--selection-fg); }
+
+  body {
+    margin: 0;
+    background: var(--canvas-soft);
+    color: var(--ink);
+    /* typography.body-md */
+    font: 400 16px/24px var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: var(--container); margin-inline: auto; padding-inline: var(--s-lg); }
+
+  /* --- type scale, verbatim from typography: ------------------------- */
+  .display-xl { font: 600 48px/48px var(--sans); letter-spacing: -2.4px; margin: 0; text-wrap: balance; }
+  .display-lg { font: 600 32px/40px var(--sans); letter-spacing: -1.28px; margin: 0; text-wrap: balance; }
+  .display-md { font: 600 24px/32px var(--sans); letter-spacing: -0.96px; margin: 0; text-wrap: balance; }
+  .display-sm { font: 600 20px/28px var(--sans); letter-spacing: -0.6px; margin: 0; }
+  .body-lg    { font: 400 18px/28px var(--sans); margin: 0; }
+  .body-sm    { font: 400 14px/20px var(--sans); letter-spacing: -0.28px; }
+  .caption-mono { font: 400 12px/16px var(--mono); }
+  .code       { font: 400 13px/20px var(--mono); }
+
+  /* Section eyebrows are mono — "Mono is the voice of the platform."
+     Sentence-case display type only; the spec forbids all-caps headlines,
+     so the letterspaced-uppercase treatment stays on the mono eyebrow. */
+  .eyebrow {
+    font: 400 12px/16px var(--mono);
+    color: var(--mute);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 var(--s-sm);
+  }
+
+  /* --- components.nav-bar ------------------------------------------- */
+  .nav {
+    position: sticky; top: 0; z-index: 10;
+    height: 64px;
+    background: color-mix(in srgb, var(--canvas) 80%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--hairline);
+    display: flex; align-items: center;
+  }
+  .nav-inner { display: flex; align-items: center; gap: var(--s-lg); width: 100%; }
+  .wordmark {
+    font: 600 20px/28px var(--sans); letter-spacing: -0.6px;
+    color: var(--ink); text-decoration: none; display: flex; align-items: center; gap: var(--s-xs);
+  }
+  .mark { width: 18px; height: 18px; }
+  .nav-links { display: flex; gap: var(--s-xxs); margin-left: var(--s-md); }
+  /* components.nav-link */
+  .nav-link {
+    color: var(--body); font: 400 14px/20px var(--sans); letter-spacing: -0.28px;
+    padding: var(--s-xs) var(--s-sm); border-radius: var(--r-full);
+    text-decoration: none; transition: color .12s, background .12s;
+  }
+  .nav-link:hover { color: var(--ink); background: var(--canvas-soft-2); }
+  .nav-ctas { margin-left: auto; display: flex; align-items: center; gap: var(--s-xs); }
+  /* components.nav-cta-* — height 28px, rounded.sm 6px, padding 0 8px */
+  .nav-btn {
+    height: 28px; padding: 0 var(--s-xs); border-radius: var(--r-sm);
+    font: 500 14px/20px var(--sans); letter-spacing: -0.28px;
+    display: inline-flex; align-items: center; border: 1px solid transparent;
+    text-decoration: none; cursor: pointer; white-space: nowrap;
+  }
+  .nav-btn--ghost   { background: var(--canvas); color: var(--ink); }
+  .nav-btn--outline { background: var(--canvas); color: var(--ink); border-color: var(--hairline); }
+  .nav-btn--solid   { background: var(--primary); color: var(--on-primary); }
+  .nav-btn--ghost:hover, .nav-btn--outline:hover { background: var(--canvas-soft-2); }
+  .nav-btn--solid:hover { opacity: .85; }
+
+  /* --- components.button-primary / button-secondary ------------------
+     rounded.pill 100px, typography.button-lg, ~48px at marketing scale  */
+  .btn {
+    height: 48px; padding: 0 var(--s-lg); border-radius: var(--r-pill);
+    font: 500 16px/24px var(--sans);
+    display: inline-flex; align-items: center; justify-content: center; gap: var(--s-xs);
+    text-decoration: none; cursor: pointer; border: 1px solid transparent;
+    transition: opacity .12s, background .12s;
+  }
+  .btn--primary { background: var(--primary); color: var(--on-primary); }
+  .btn--primary:hover { opacity: .85; }
+  .btn--secondary { background: var(--canvas); color: var(--ink); border-color: var(--hairline); }
+  .btn--secondary:hover { background: var(--canvas-soft-2); }
+
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--link); outline-offset: 2px;
+  }
+
+  /* --- hero ---------------------------------------------------------- */
+  .hero { position: relative; overflow: hidden; padding: var(--s-5xl) 0 var(--s-4xl); text-align: center; }
+  /* "the mesh gradient is the only decorative chrome — hero scale only" */
+  .mesh {
+    position: absolute; inset: -20% -10% auto; height: 520px; pointer-events: none;
+    filter: blur(72px); opacity: .5;
+    background:
+      radial-gradient(38% 46% at 22% 34%, var(--gradient-develop-start) 0%, transparent 68%),
+      radial-gradient(34% 42% at 40% 62%, var(--gradient-develop-end) 0%, transparent 66%),
+      radial-gradient(36% 44% at 62% 30%, var(--gradient-preview-start) 0%, transparent 66%),
+      radial-gradient(30% 40% at 74% 58%, var(--gradient-preview-end) 0%, transparent 64%),
+      radial-gradient(28% 38% at 88% 36%, var(--gradient-ship-start) 0%, transparent 64%),
+      radial-gradient(26% 34% at 12% 62%, var(--gradient-ship-end) 0%, transparent 62%);
+  }
+  @media (prefers-color-scheme: dark) { .mesh { opacity: .42; } }
+  :root[data-theme="dark"] .mesh { opacity: .42; }
+  :root[data-theme="light"] .mesh { opacity: .5; }
+
+  .hero-inner { position: relative; max-width: 760px; margin-inline: auto; }
+  .hero .body-lg { color: var(--body); margin-top: var(--s-md); }
+  .hero-ctas { display: flex; gap: var(--s-sm); justify-content: center; margin-top: var(--s-xl); flex-wrap: wrap; }
+  /* link-bg-soft is spec'd for "what's new" pill banners */
+  .whats-new {
+    display: inline-flex; align-items: center; gap: var(--s-xs);
+    background: var(--link-bg-soft); color: var(--link-deep);
+    border-radius: var(--r-full); padding: var(--s-xxs) var(--s-sm);
+    font: 400 12px/16px var(--mono); text-decoration: none; margin-bottom: var(--s-lg);
+  }
+  .whats-new:hover { text-decoration: underline; }
+
+  /* --- terminal / code mock: components use primary as the dark rect --- */
+  .terminal {
+    margin: var(--s-3xl) auto 0; max-width: 720px; text-align: left;
+    background: var(--flip-bg); border-radius: var(--r-lg);
+    box-shadow: var(--el-4), var(--flip-ring); overflow: hidden;
+  }
+  .terminal-bar {
+    display: flex; align-items: center; gap: var(--s-xs);
+    padding: var(--s-sm) var(--s-md); border-bottom: 1px solid var(--flip-hairline);
+  }
+  .dot { width: 10px; height: 10px; border-radius: var(--r-full); background: #ffffff29; }
+  .terminal-title { font: 400 12px/16px var(--mono); color: #888888; margin-left: var(--s-xs); }
+  .terminal-body { padding: var(--s-md); overflow-x: auto; }
+  .terminal-body pre { margin: 0; font: 400 13px/20px var(--mono); color: var(--flip-ink); }
+  .t-mute { color: #888888; }
+  .t-cyan { color: #50e3c2; }
+  .t-blue { color: #0070f3; }
+  .t-amber { color: #f5a623; }
+
+  /* --- logo strip: "monochrome SVGs, consistent 24px height" ---------- */
+  .logos { padding: var(--s-2xl) 0; }
+  .logo-row {
+    display: flex; flex-wrap: wrap; gap: var(--s-4xl);
+    align-items: center; justify-content: center;
+  }
+  .logo {
+    height: 24px; display: inline-flex; align-items: center;
+    font: 600 16px/24px var(--sans); /* body-md-strong weight; spec sets no tracking at 16px */
+    color: var(--logo-ink);
+  }
+
+  /* --- tab pill row: components.tab-ghost, rounded.pill-sm 64px ------- */
+  .tabs { display: flex; gap: var(--s-xs); justify-content: center; flex-wrap: nowrap; overflow-x: auto; padding-bottom: var(--s-xs); }
+  .tab {
+    background: transparent; color: var(--body); border: 1px solid transparent;
+    font: 400 14px/20px var(--sans); letter-spacing: -0.28px;
+    height: 36px; padding: 0 var(--s-md); border-radius: var(--r-pill-sm);
+    cursor: pointer; white-space: nowrap; transition: background .12s, color .12s;
+  }
+  .tab:hover { color: var(--ink); background: var(--canvas-soft-2); }
+  .tab[aria-selected="true"] { background: var(--canvas); color: var(--ink); box-shadow: var(--el-1); }
+
+  /* --- bands: canvas-soft -> canvas -> primary polarity flip ---------- */
+  .band { padding: var(--s-5xl) 0; }
+  .band--canvas { background: var(--canvas); border-block: 1px solid var(--hairline); }
+  .band--flip   { background: var(--flip-bg); color: var(--flip-ink); box-shadow: var(--flip-ring); }
+  .band-head { max-width: 680px; margin: 0 0 var(--s-2xl); }
+  .band-head .body-lg { color: var(--body); margin-top: var(--s-sm); }
+  .band--flip .band-head .body-lg { color: var(--flip-body); }
+
+  /* --- feature grid: 3-up -> 2-up -> 1-up, rounded.md 8px, level 3 ---- */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-lg); }
+  .card {
+    background: var(--canvas); border-radius: var(--r-md);
+    box-shadow: var(--el-3); padding: var(--s-lg);
+    display: flex; flex-direction: column; gap: var(--s-xs);
+  }
+  .card p { color: var(--body); margin: 0; }
+  .card .stat { font: 600 32px/40px var(--sans); letter-spacing: -1.28px; font-variant-numeric: tabular-nums; }
+
+  /* --- region table inside the flipped band -------------------------- */
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; }
+  th, td {
+    text-align: left; padding: var(--s-sm) var(--s-md);
+    border-bottom: 1px solid var(--flip-hairline); font-variant-numeric: tabular-nums;
+  }
+  th { font: 400 12px/16px var(--mono); color: #888888; text-transform: uppercase; letter-spacing: .08em; font-weight: 400; }
+  td { font: 400 14px/20px var(--sans); letter-spacing: -0.28px; color: var(--flip-body); }
+  td.region { color: var(--flip-ink); }
+  .pill-status {
+    display: inline-flex; align-items: center; gap: var(--s-xxs);
+    font: 400 12px/16px var(--mono); border-radius: var(--r-full);
+    padding: 2px var(--s-xs); background: #ffffff14; color: #a1a1a1;
+  }
+  .pill-status[data-state="live"] { color: #50e3c2; }
+  .pill-status[data-state="soon"] { color: #f5a623; }
+
+  /* --- pricing: 3-up, middle tier polarity-flipped, level 4 ---------- */
+  .pricing { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-lg); align-items: start; }
+  .tier {
+    background: var(--canvas); border-radius: var(--r-lg);
+    box-shadow: var(--el-4); padding: var(--s-xl);
+    display: flex; flex-direction: column; gap: var(--s-md);
+  }
+  .tier--featured { background: var(--flip-bg); color: var(--flip-ink); box-shadow: var(--el-4), var(--flip-ring); }
+  .tier .price { font: 600 48px/48px var(--sans); letter-spacing: -2.4px; font-variant-numeric: tabular-nums; }
+  .tier .price span { font: 400 14px/20px var(--sans); letter-spacing: -0.28px; color: var(--mute); }
+  .tier--featured .price span { color: var(--flip-body); }
+  .tier ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-xs); }
+  .tier li { font: 400 14px/20px var(--sans); letter-spacing: -0.28px; color: var(--body); display: flex; gap: var(--s-xs); }
+  .tier--featured li { color: var(--flip-body); }
+  .tier li svg { flex: none; margin-top: 3px; }
+  .tier .btn { width: 100%; margin-top: auto; }
+  .tier--featured .btn--primary { background: #ffffff; color: #171717; }
+
+  /* --- footer -------------------------------------------------------- */
+  .footer { background: var(--canvas); border-top: 1px solid var(--hairline); padding: var(--s-4xl) 0 var(--s-xl); }
+  .footer-cols { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-xl); }
+  .footer h4 { font: 500 14px/20px var(--sans); letter-spacing: -0.28px; margin: 0 0 var(--s-sm); color: var(--ink); }
+  .footer a { display: block; color: var(--body); text-decoration: none; font: 400 14px/20px var(--sans); letter-spacing: -0.28px; padding: var(--s-xxs) 0; }
+  .footer a:hover { color: var(--ink); }
+  .colophon {
+    margin-top: var(--s-3xl); padding-top: var(--s-md); border-top: 1px solid var(--hairline);
+    font: 400 12px/16px var(--mono); color: var(--mute);
+    display: flex; justify-content: space-between; gap: var(--s-md); flex-wrap: wrap;
+  }
+  .colophon a { display: inline; color: var(--link); font: inherit; }
+
+  /* --- Responsive Strategy table, verbatim breakpoints --------------- */
+  @media (max-width: 1199px) { .hero { padding-top: var(--s-4xl); } }
+  @media (max-width: 959px) {
+    .grid-3, .pricing { grid-template-columns: repeat(2, 1fr); }
+    .footer-cols { grid-template-columns: repeat(2, 1fr); }
+    /* The spec defines no responsive type ramp, so this steps down to the
+       next rung of its own scale (display-lg) rather than inventing a size. */
+    .display-xl { font-size: 32px; line-height: 40px; letter-spacing: -1.28px; }
+  }
+  @media (max-width: 599px) {
+    .grid-3, .pricing { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+    .band { padding: var(--s-4xl) 0; }
+    .tabs { justify-content: flex-start; }
+    .display-xl { font-size: 24px; line-height: 32px; letter-spacing: -0.96px; }
+    /* "nav buttons inflate touch area on mobile to meet the 44x44 floor" */
+    .nav-btn { height: 44px; padding: 0 var(--s-sm); }
+    .nav { height: auto; padding-block: var(--s-xs); }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="wordmark" href="#top">
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 22 20H2Z" fill="currentColor"/></svg>
+      Halyard
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a class="nav-link" href="#platform">Platform</a>
+      <a class="nav-link" href="#regions">Regions</a>
+      <a class="nav-link" href="#pricing">Pricing</a>
+      <a class="nav-link" href="#docs">Docs</a>
+    </nav>
+    <div class="nav-ctas">
+      <a class="nav-btn nav-btn--outline" href="#docs">Ask AI</a>
+      <a class="nav-btn nav-btn--ghost" href="#login">Log In</a>
+      <a class="nav-btn nav-btn--solid" href="#signup">Sign Up</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="mesh" aria-hidden="true"></div>
+    <div class="wrap hero-inner">
+      <a class="whats-new" href="#regions">Frankfurt and São Paulo are now live &rarr;</a>
+      <h1 class="display-xl">Postgres that lives where your users do.</h1>
+      <p class="body-lg">Halyard replicates a single logical database across 18 regions and routes every read to the closest healthy replica. Writes stay strongly consistent. You keep the same connection string.</p>
+      <div class="hero-ctas">
+        <a class="btn btn--primary" href="#signup">Start a database</a>
+        <a class="btn btn--secondary" href="#docs">Read the docs</a>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="terminal-title">~/checkout-service</span>
+        </div>
+        <div class="terminal-body">
+<pre><span class="t-mute">$</span> halyard db create checkout <span class="t-mute">--regions</span> iad,fra,gru
+
+<span class="t-cyan">✓</span> Provisioned <span class="t-blue">checkout</span> in 3 regions <span class="t-mute">(4.2s)</span>
+<span class="t-cyan">✓</span> Primary   iad  <span class="t-mute">us-east-1</span>
+<span class="t-cyan">✓</span> Replica   fra  <span class="t-mute">eu-central-1   lag 41ms</span>
+<span class="t-cyan">✓</span> Replica   gru  <span class="t-mute">sa-east-1     lag 88ms</span>
+
+<span class="t-amber">→</span> postgresql://checkout.halyard.db:5432</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="logos wrap" aria-label="Teams building on Halyard">
+    <div class="logo-row">
+      <span class="logo">Northsail</span>
+      <span class="logo">Bellweather</span>
+      <span class="logo">Tidepool</span>
+      <span class="logo">Quarry</span>
+      <span class="logo">Cordage</span>
+    </div>
+  </section>
+
+  <section class="band band--canvas" id="platform">
+    <div class="wrap">
+      <div class="tabs" role="tablist" aria-label="Product surfaces">
+        <button class="tab" role="tab" aria-selected="true" type="button">Postgres</button>
+        <button class="tab" role="tab" aria-selected="false" type="button">Vector</button>
+        <button class="tab" role="tab" aria-selected="false" type="button">Queues</button>
+        <button class="tab" role="tab" aria-selected="false" type="button">Cache</button>
+        <button class="tab" role="tab" aria-selected="false" type="button">Analytics</button>
+      </div>
+
+      <div class="band-head" style="margin-top: var(--s-2xl);">
+        <p class="eyebrow">Read path</p>
+        <h2 class="display-lg">Latency is a routing problem, not a caching problem.</h2>
+        <p class="body-lg">Every replica runs the full schema. The router picks by measured round-trip, not by static region mapping, so a cold failover costs you milliseconds instead of a page.</p>
+      </div>
+
+      <div class="grid-3">
+        <article class="card">
+          <p class="eyebrow">p50 read</p>
+          <span class="stat">7ms</span>
+          <p class="body-sm">Measured from the application pod to the nearest replica, across all 18 regions, over the last 30 days.</p>
+        </article>
+        <article class="card">
+          <p class="eyebrow">Failover</p>
+          <span class="stat">1.4s</span>
+          <p class="body-sm">Median promotion time when a primary goes unreachable. Connections are held open and replayed, not dropped.</p>
+        </article>
+        <article class="card">
+          <p class="eyebrow">Consistency</p>
+          <span class="stat">Strict</span>
+          <p class="body-sm">Writes commit through a single primary with synchronous quorum. Read-your-writes holds without session pinning.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band band--flip" id="regions">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow" style="color:#888888;">Fleet</p>
+        <h2 class="display-lg">Eighteen regions, one connection string.</h2>
+        <p class="body-lg">Add a region and the router picks it up on the next health sweep. No client change, no redeploy.</p>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th scope="col">Region</th><th scope="col">Code</th><th scope="col">Replica lag</th><th scope="col">Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="region">Washington, D.C.</td><td>iad</td><td>— primary</td><td><span class="pill-status" data-state="live">Live</span></td></tr>
+            <tr><td class="region">Frankfurt</td><td>fra</td><td>41 ms</td><td><span class="pill-status" data-state="live">Live</span></td></tr>
+            <tr><td class="region">São Paulo</td><td>gru</td><td>88 ms</td><td><span class="pill-status" data-state="live">Live</span></td></tr>
+            <tr><td class="region">Singapore</td><td>sin</td><td>112 ms</td><td><span class="pill-status" data-state="live">Live</span></td></tr>
+            <tr><td class="region">Cape Town</td><td>cpt</td><td>—</td><td><span class="pill-status" data-state="soon">Q3</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="pricing">
+    <div class="wrap">
+      <div class="band-head">
+        <p class="eyebrow">Pricing</p>
+        <h2 class="display-lg">Pay for the regions you actually run in.</h2>
+        <p class="body-lg">Storage is billed once. Replicas are billed per region, per hour, and stop billing the moment you remove them.</p>
+      </div>
+      <div class="pricing">
+        <article class="tier">
+          <h3 class="display-sm">Hobby</h3>
+          <div class="price">$0<span> / month</span></div>
+          <ul>
+            <li>1 region, 1 GB storage</li>
+            <li>Scale-to-zero after 5 minutes idle</li>
+            <li>Community support</li>
+          </ul>
+          <a class="btn btn--secondary" href="#signup">Start free</a>
+        </article>
+        <article class="tier tier--featured">
+          <h3 class="display-sm">Pro</h3>
+          <div class="price">$29<span> / month</span></div>
+          <ul>
+            <li>Up to 6 regions, 100 GB storage</li>
+            <li>1.4s median failover, 99.99% SLA</li>
+            <li>Point-in-time restore, 30 days</li>
+            <li>Email support, 1 business day</li>
+          </ul>
+          <a class="btn btn--primary" href="#signup">Start a database</a>
+        </article>
+        <article class="tier">
+          <h3 class="display-sm">Enterprise</h3>
+          <div class="price">Custom</div>
+          <ul>
+            <li>All 18 regions, unbounded storage</li>
+            <li>Private networking and BYOC</li>
+            <li>Named support engineer</li>
+          </ul>
+          <a class="btn btn--secondary" href="#contact">Talk to us</a>
+        </article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer" id="docs">
+  <div class="wrap">
+    <div class="footer-cols">
+      <div>
+        <h4>Product</h4>
+        <a href="#platform">Postgres</a><a href="#platform">Vector</a><a href="#platform">Queues</a><a href="#pricing">Pricing</a>
+      </div>
+      <div>
+        <h4>Developers</h4>
+        <a href="#docs">Documentation</a><a href="#docs">CLI reference</a><a href="#docs">Migration guide</a><a href="#regions">Status</a>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <a href="#top">About</a><a href="#top">Careers</a><a href="#top">Changelog</a><a href="#contact">Contact</a>
+      </div>
+      <div>
+        <h4>Legal</h4>
+        <a href="#top">Privacy</a><a href="#top">Terms</a><a href="#top">DPA</a><a href="#top">Subprocessors</a>
+      </div>
+    </div>
+    <div class="colophon">
+      <span>Halyard is a fictional product, invented purely as test content.</span>
+      <span>Rendered from <a href="https://github.com/hemanth-create/UI-UX/blob/main/design-md/vercel/DESIGN.md">design-md/vercel/DESIGN.md</a> — no color, size, or radius chosen outside the spec.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll('.tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.tab').forEach(function (t) { t.setAttribute('aria-selected', 'false'); });
+      tab.setAttribute('aria-selected', 'true');
+    });
+  });
+</script>
+</body>
+</html>
